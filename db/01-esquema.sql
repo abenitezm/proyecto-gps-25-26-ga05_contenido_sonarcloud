@@ -1,5 +1,13 @@
 BEGIN;
 
+DROP TABLE IF EXISTS noticia;
+DROP TABLE IF EXISTS merchandising;
+DROP TABLE IF EXISTS artista_cancion;
+DROP TABLE IF EXISTS cancion;
+DROP TABLE IF EXISTS album;
+DROP TABLE IF EXISTS genero;
+
+
 CREATE TABLE genero (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(120) NOT NULL UNIQUE
@@ -12,7 +20,7 @@ CREATE TABLE album (
   urlImagen TEXT,
   fecha DATE,
   genero INTEGER REFERENCES genero(id),
-  artista INTEGER REFERENCES artista(id)
+  artista INTEGER
 );
 
 CREATE TABLE cancion (
@@ -20,12 +28,12 @@ CREATE TABLE cancion (
   nombre VARCHAR(200) NOT NULL,
   urlImagen TEXT,
   duracion INTEGER,
-  album INTEGER REFERENCES album(id) ON DELETE CASCADE
+  album INTEGER REFERENCES album(id)
 );
 
 CREATE TABLE artista_cancion (
   cancion INTEGER REFERENCES cancion(id) ON DELETE CASCADE,
-  artista INTEGER REFERENCES artista(id) ON DELETE CASCADE,
+  artista INTEGER ,
   PRIMARY KEY (cancion, artista)
 );
 
@@ -34,7 +42,7 @@ CREATE TABLE merchandising (
   nombre VARCHAR(200) NOT NULL,
   precio NUMERIC(10,2) NOT NULL,
   urlImagen TEXT,
-  artista INTEGER REFERENCES artista(id),
+  artista INTEGER,
   stock INTEGER DEFAULT 0
 );
 
@@ -43,7 +51,7 @@ CREATE TABLE noticia (
   titulo VARCHAR(300) NOT NULL,
   contenidoHTML TEXT NOT NULL,
   fecha TIMESTAMP DEFAULT NOW(),
-  autor INTEGER REFERENCES autor(id)
+  autor INTEGER
 );
 
 COMMIT;
