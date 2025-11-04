@@ -21,6 +21,7 @@ func main() {
 	routes := sw.ApiHandleFunctions{
 		MerchandisingAPI: sw.MerchandisingAPI{DB: db.DB},
 		PedidoAPI:        sw.PedidoAPI{DB: db.DB},
+		SearchAPI:        sw.SearchAPI{DB: db.DB},
 	}
 
 	log.Printf("Servidor iniciado")
