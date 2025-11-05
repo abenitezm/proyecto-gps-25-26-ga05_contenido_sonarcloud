@@ -74,6 +74,8 @@ type ApiHandleFunctions struct {
 	NoticiasAPI NoticiasAPI
 	// Routes for the PedidoAPI part of the API
 	PedidoAPI PedidoAPI
+	// Routes for the SearchAPI part of the API
+	SearchAPI SearchAPI
 }
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
@@ -215,6 +217,12 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodPost,
 			"/noticias",
 			handleFunctions.NoticiasAPI.NoticiasPost,
+		},
+		{
+			"BusquedaGet",
+			http.MethodGet,
+			"/busqueda",
+			handleFunctions.SearchAPI.BusquedaGet,
 		},
 		{
 			"PagoPedidoPost",
