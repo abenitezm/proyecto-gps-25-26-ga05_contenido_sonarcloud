@@ -18,13 +18,13 @@ import (
 // Route is the information for every URI.
 type Route struct {
 	// Name is the name of this Route.
-	Name		string
+	Name string
 	// Method is the string for the HTTP method. ex) GET, POST etc..
-	Method		string
+	Method string
 	// Pattern is the pattern of the URI.
-	Pattern	 	string
+	Pattern string
 	// HandlerFunc is the handler function of this route.
-	HandlerFunc	gin.HandlerFunc
+	HandlerFunc gin.HandlerFunc
 }
 
 // NewRouter returns a new router.
@@ -72,10 +72,14 @@ type ApiHandleFunctions struct {
 	MerchandisingAPI MerchandisingAPI
 	// Routes for the NoticiasAPI part of the API
 	NoticiasAPI NoticiasAPI
+	// Routes for the PedidoAPI part of the API
+	PedidoAPI PedidoAPI
+	// Routes for the SearchAPI part of the API
+	SearchAPI SearchAPI
 }
 
 func getRoutes(handleFunctions ApiHandleFunctions) []Route {
-	return []Route{ 
+	return []Route{
 		{
 			"AlbumsGet",
 			http.MethodGet,
@@ -203,6 +207,12 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			handleFunctions.MerchandisingAPI.MerchPost,
 		},
 		{
+			"NoticiasIdGet",
+			http.MethodGet,
+			"/noticias/:id",
+			handleFunctions.NoticiasAPI.NoticiasIdGet,
+		},
+		{
 			"NoticiasGet",
 			http.MethodGet,
 			"/noticias",
@@ -213,6 +223,24 @@ func getRoutes(handleFunctions ApiHandleFunctions) []Route {
 			http.MethodPost,
 			"/noticias",
 			handleFunctions.NoticiasAPI.NoticiasPost,
+		},
+		{
+			"NoticiasIdDelete",
+			http.MethodDelete,
+			"/noticias/:id",
+			handleFunctions.NoticiasAPI.NoticiasIdDelete,
+		},
+		{
+			"BusquedaGet",
+			http.MethodGet,
+			"/busqueda",
+			handleFunctions.SearchAPI.BusquedaGet,
+		},
+		{
+			"PagoPedidoPost",
+			http.MethodPost,
+			"/pedido/pago",
+			handleFunctions.PedidoAPI.Pago,
 		},
 	}
 }
