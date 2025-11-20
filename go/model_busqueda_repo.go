@@ -151,7 +151,7 @@ func SearchMerch(db *sql.DB, q string, page, perPage int) ([]Merch, int, error) 
         return nil, 0, err
     }
     offset := (page - 1) * perPage
-    selQuery := fmt.Sprintf("SELECT id,nombre,precio,urlimagen,artista,stock FROM merchandising %s ORDER BY id LIMIT $%d OFFSET $%d", whereClause, len(args)+1, len(args)+2)
+    selQuery := fmt.Sprintf("SELECT id,nombre,precio,imagen,artista,stock FROM merchandising %s ORDER BY id LIMIT $%d OFFSET $%d", whereClause, len(args)+1, len(args)+2)
     args = append(args, perPage, offset)
     rows, err := db.Query(selQuery, args...)
     if err != nil {
@@ -161,7 +161,7 @@ func SearchMerch(db *sql.DB, q string, page, perPage int) ([]Merch, int, error) 
     var items []Merch
     for rows.Next() {
         var m Merch
-        if err := rows.Scan(&m.Id, &m.Nombre, &m.Precio, &m.UrlImagen, &m.Artista, &m.Stock); err != nil {
+        if err := rows.Scan(&m.Id, &m.Nombre, &m.Precio, &m.Imagen, &m.Artista, &m.Stock); err != nil {
             return nil, total, err
         }
         items = append(items, m)
