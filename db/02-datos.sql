@@ -122,13 +122,17 @@ INSERT INTO artista_cancion (cancion, artista) VALUES
 (18, 1);  -- Flames ft. Aitana
 
 -- Merchandising
-INSERT INTO merchandising (nombre, precio, urlImagen, artista, stock) VALUES
-('Camiseta Aitana Alpha', 24.99, 'https://img.com/aita-shirt.jpg', 1, 30),
-('Vinilo Arctic Monkeys AM', 34.99, 'https://img.com/am-vinilo.jpg', 2, 15),
-('Gorra Bad Bunny', 19.99, 'https://img.com/gorra-bunny.jpg', 3, 50),
-('Sudadera Vetusta Morla', 29.99, 'https://img.com/vetusta-sudadera.jpg', 4, 20),
-('Pulsera David Guetta', 9.99, 'https://img.com/guetta-pulsera.jpg', 5, 60);
-
+INSERT INTO merchandising (nombre, precio, imagen, artista, stock) VALUES
+('Camiseta Aitana Alpha', 24.99,
+    pg_read_binary_file('/tmp/assets/merch/camiseta_aitana.jpg')::bytea, 1, 30),
+('Camiseta Arctic Monkeys AM', 34.99, 
+    pg_read_binary_file('/tmp/assets/merch/camiseta_arctic.jpg')::bytea, 2, 15),
+('Gorra Bad Bunny', 19.99, 
+    pg_read_binary_file('/tmp/assets/merch/gorra_bad.jpg')::bytea, 3, 50),
+('Sudadera Vetusta Morla', 29.99, 
+    pg_read_binary_file('/tmp/assets/merch/sudadera_vetusta_morla.jpg')::bytea, 4, 20),
+('Pulsera David Guetta', 9.99, 
+    pg_read_binary_file('/tmp/assets/merch/pulsera_david_guetta.jpg')::bytea, 5, 60);
 -- Noticias
 INSERT INTO noticia (titulo, contenidoHTML, fecha, autor) VALUES
 ('Aitana estrena Alpha con gran éxito',

@@ -53,7 +53,7 @@ CREATE TABLE merchandising (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(200) NOT NULL,
   precio NUMERIC(10,2) NOT NULL,
-  urlImagen TEXT,
+  imagen BYTEA,
   artista INTEGER,
   stock INTEGER DEFAULT 0
 );
