@@ -10,18 +10,25 @@
 package main
 
 import (
+	"contenido/db"
+	sw "contenido/go"
 	"log"
-
-	// WARNING!
-	// Pass --git-repo-id and --git-user-id properties when generating the code
-	//
-	sw "github.com/GIT_USER_ID/GIT_REPO_ID/go"
 )
 
 func main() {
-	routes := sw.ApiHandleFunctions{}
+	db.InitDatabase()
+	defer db.DB.Close()
+	routes := sw.ApiHandleFunctions{
+		MerchandisingAPI: sw.MerchandisingAPI{DB: db.DB},
+		PedidoAPI:        sw.PedidoAPI{DB: db.DB},
+		AlbumesAPI:       sw.AlbumesAPI{DB: db.DB},
+		CancionesAPI:     sw.CancionesAPI{DB: db.DB},
+		SearchAPI:        sw.SearchAPI{DB: db.DB},
+		NoticiasAPI:	  sw.NoticiasAPI{DB: db.DB},
+		GenerosAPI:       sw.GenerosAPI{DB: db.DB},
+	}
 
-	log.Printf("Server started")
+	log.Printf("Servidor iniciado")
 
 	router := sw.NewRouter(routes)
 

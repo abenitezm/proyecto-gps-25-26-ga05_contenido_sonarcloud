@@ -10,18 +10,33 @@
 package openapi
 
 type Album struct {
+	Id        int32  `json:"id,omitempty"`
+	Nombre    string `json:"nombre"`
+	Duracion  int32  `json:"duracion"` // segundos
+	Imagen    []byte `json:"imagen,omitempty"`
+	Fecha     string `json:"fecha"`
+	Genero    Genero `json:"genero"`
+	Artista   int32  `json:"artista"`
+	Precio    float32 `json:"precio"`
+}
 
-	Id int32 `json:"id,omitempty"`
+type CreateAlbumRequest struct {
+	Nombre    string `json:"nombre" binding:"required"`
+	Duracion  *int32 `json:"duracion"` // segundos (opcional)
+	Imagen    []byte `json:"imagen,omitempty"`
+	Fecha     string `json:"fecha"`
+	Genero    int32  `json:"genero"`
+	Artista   int32  `json:"artista"`
+	Precio    float32 `json:"precio" binding:"required"`
+	Formato   *int32  `json:"formato,omitempty"`
+}
 
-	Nombre string `json:"nombre"`
-
-	Duracion string `json:"duracion"`
-
-	UrlImagen string `json:"urlImagen"`
-
-	Fecha string `json:"fecha"`
-
-	Genero Genero `json:"genero"`
-
-	Artista int32 `json:"artista"`
+type UpdateAlbumRequest struct {
+	Nombre    *string `json:"nombre"`
+	Duracion  *int32  `json:"duracion"`
+	Imagen    *[]byte `json:"imagen"`
+	Fecha     *string `json:"fecha"`
+	Genero    *int32  `json:"genero"`
+	Artista   *int32  `json:"artista"`
+	Precio    *float32 `json:"precio"`
 }
