@@ -133,11 +133,11 @@ INSERT INTO merchandising (nombre, precio, imagen, artista, stock) VALUES
 INSERT INTO noticia (titulo, contenidoHTML, fecha, autor) VALUES
 ('Aitana estrena Alpha con gran éxito',
  '<p>El álbum <b>Alpha</b> supera el millón de reproducciones en su primer día.</p>', 
- '2023-09-10 12:00:00', 1),
+ '2023-09-10 12:00:00', 4),
 
 ('Arctic Monkeys anuncian nueva gira europea',
  '<p>La banda recorrerá 15 países en 2024.</p>', 
- '2023-11-01 10:30:00', 2),
+ '2023-11-01 10:30:00', 4),
 
 ('Bad Bunny lidera los Latin Grammy',
  '<h2>El fenómeno puertorriqueño consolida su reinado en la música latina</h2>
@@ -188,12 +188,12 @@ generaciones de artistas urbanos que ven en su trayectoria un camino a seguir.</
 <li>Mejor Canción Urbana</li>
 <li>Mejor Interpretación Reggaetón</li>
 </ul>', 
- '2023-11-20 21:00:00', 3),
+ '2023-11-20 21:00:00', 4),
 
 ('Vetusta Morla presenta "Cable a Tierra" en Madrid',
  '<p>Concierto lleno y críticas positivas en su última gira.</p>', 
- '2023-10-15 19:00:00', 2),
+ '2023-10-15 19:00:00', 4),
 
 ('David Guetta lanza nuevo single con Sia',
  '<p>El DJ francés vuelve a colaborar con Sia en un nuevo éxito dance.</p>', 
- '2023-08-01 08:00:00', 1);
+ '2023-08-01 08:00:00', 4);
