@@ -18,6 +18,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ERRORES RECURRENTES
+const ERR_ALBUM_NO_ENCONTRADO = "Álbum no encontrado"
+
 type AlbumesAPI struct {
 	DB *sql.DB
 }
@@ -129,7 +132,7 @@ func (api *AlbumesAPI) AlbumsIdGet(c *gin.Context) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Álbum no encontrado"})
+			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al consultar el álbum: " + err.Error()})
@@ -273,7 +276,7 @@ func (api *AlbumesAPI) AlbumsIdPatch(c *gin.Context) {
 	err := api.DB.QueryRow(verificacion, idParam).Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Álbum no encontrado"})
+			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al verificar el álbum: " + err.Error()})
@@ -383,7 +386,7 @@ func (api *AlbumesAPI) AlbumsIdDelete(c *gin.Context) {
 	err := api.DB.QueryRow(verificacion, idParam).Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Álbum no encontrado"})
+			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al verificar el álbum: " + err.Error()})
@@ -510,7 +513,7 @@ func (api *AlbumesAPI) AlbumsIdDetalleGet(c *gin.Context) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Álbum no encontrado"})
+			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al consultar el álbum: " + err.Error()})
@@ -620,7 +623,7 @@ func (api *AlbumesAPI) AlbumsIdImagenGet(c *gin.Context) {
 	err := api.DB.QueryRow(query, idParam).Scan(&imagen, &nombre)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Álbum no encontrado"})
+			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al consultar la imagen del álbum: " + err.Error()})
