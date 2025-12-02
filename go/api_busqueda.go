@@ -23,6 +23,9 @@ type SearchAPI struct {
     DB *sql.DB
 }
 
+const C_WHERE = " WHERE ."
+const C_OFFSET = " OFFSET $."
+
 // ResolverIDGenero retorna el id del género para un parámetro dado que puede ser un ID o un nombre.
 func (api *SearchAPI) ResolverIDGenero(generoParam string) (*int, error) {
     generoParam = strings.TrimSpace(generoParam)
@@ -116,7 +119,7 @@ func (api *SearchAPI) BuscarAlbumes(q string, generoID *int, formatoID *int, pag
     // Construir consulta COUNT
     countQuery := "SELECT COUNT(DISTINCT a.id) " + baseQuery
     if whereClause != "" {
-        countQuery += " WHERE " + whereClause
+        countQuery += C_WHERE + whereClause
     }
     
     fmt.Printf("DEBUG COUNT Query: %s\n", countQuery)
@@ -144,10 +147,10 @@ func (api *SearchAPI) BuscarAlbumes(q string, generoID *int, formatoID *int, pag
                 baseQuery
     
     if whereClause != "" {
-        selQuery += " WHERE " + whereClause
+        selQuery += C_WHERE + whereClause
     }
     
-    selQuery += " ORDER BY a.id LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
+    selQuery += " ORDER BY a.id LIMIT $" + strconv.Itoa(len(args)+1) + C_OFFSET + strconv.Itoa(len(args)+2)
     
     selArgs := append(args, porPagina, offset)
     fmt.Printf("DEBUG SELECT Query: %s\n", selQuery)
@@ -256,7 +259,7 @@ func (api *SearchAPI) BuscarCanciones(q string, generoID *int, pagina, porPagina
     // Consulta COUNT
     countQuery := "SELECT COUNT(*) FROM cancion c"
     if whereClause != "" {
-        countQuery += " WHERE " + whereClause
+        countQuery += C_WHERE + whereClause
     }
     
     var total int
@@ -269,10 +272,10 @@ func (api *SearchAPI) BuscarCanciones(q string, generoID *int, pagina, porPagina
     // Consulta SELECT con paginación
     selQuery := "SELECT c.id, c.nombre, c.duracion, c.album FROM cancion c"
     if whereClause != "" {
-        selQuery += " WHERE " + whereClause
+        selQuery += C_WHERE + whereClause
     }
     
-    selQuery += " ORDER BY c.id LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
+    selQuery += " ORDER BY c.id LIMIT $" + strconv.Itoa(len(args)+1) + C_OFFSET + strconv.Itoa(len(args)+2)
     
     selArgs := append(args, porPagina, offset)
     filas, err := api.DB.Query(selQuery, selArgs...)
@@ -310,7 +313,7 @@ func (api *SearchAPI) BuscarMerch(q string, pagina, porPagina int) ([]Merch, int
     // Consulta COUNT
     countQuery := "SELECT COUNT(*) FROM merchandising"
     if whereClause != "" {
-        countQuery += " WHERE " + whereClause
+        countQuery += C_WHERE + whereClause
     }
     
     var total int
@@ -323,12 +326,12 @@ func (api *SearchAPI) BuscarMerch(q string, pagina, porPagina int) ([]Merch, int
     // Consulta SELECT con paginación
     selQuery := "SELECT id, nombre, precio, imagen, artista, stock FROM merchandising"
     if whereClause != "" {
-        selQuery += " WHERE " + whereClause
+        selQuery += C_WHERE + whereClause
     }
     
     // Ajustar los números de parámetros para la paginación
     limitOffsetIdx := len(args) + 1
-    selQuery += " ORDER BY id LIMIT $" + strconv.Itoa(limitOffsetIdx) + " OFFSET $" + strconv.Itoa(limitOffsetIdx+1)
+    selQuery += " ORDER BY id LIMIT $" + strconv.Itoa(limitOffsetIdx) + C_OFFSET + strconv.Itoa(limitOffsetIdx+1)
     
     selArgs := append(args, porPagina, offset)
     filas, err := api.DB.Query(selQuery, selArgs...)
@@ -386,7 +389,7 @@ func (api *SearchAPI) BuscarArtistas(q string, generoID *int) ([]ArtistResult, i
         
         query := "SELECT DISTINCT artista FROM album"
         if whereClause != "" {
-            query += " WHERE " + whereClause
+            query += C_WHERE + whereClause
         }
         
         filas, err := api.DB.Query(query, args...)
@@ -419,7 +422,7 @@ func (api *SearchAPI) BuscarArtistas(q string, generoID *int) ([]ArtistResult, i
         
         query := "SELECT DISTINCT ac.artista FROM artista_cancion ac JOIN cancion c ON ac.cancion = c.id"
         if whereClause != "" {
-            query += " WHERE " + whereClause
+            query += C_WHERE + whereClause
         }
         
         filas, err := api.DB.Query(query, args...)
@@ -452,7 +455,7 @@ func (api *SearchAPI) BuscarArtistas(q string, generoID *int) ([]ArtistResult, i
         
         query := "SELECT DISTINCT artista FROM merchandising"
         if whereClause != "" {
-            query += " WHERE " + whereClause
+            query += C_WHERE + whereClause
         }
         
         filas, err := api.DB.Query(query, args...)
