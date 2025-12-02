@@ -75,39 +75,50 @@ func (api *SearchAPI) BuscarAlbumes(q string, generoID *int, formatoID *int, pag
     if q != "" {
         likeQ = "%" + q + "%"
     }
-    var where []string
-    var args []interface{}
-    idx := 1
     
     fmt.Printf("DEBUG BuscarAlbumes - Parámetros: q='%s', generoID=%v, formatoID=%v\n", q, generoID, formatoID)
     
-    // Base query
-    baseQuery := "FROM album a"
+    var baseQuery, whereClause string
+    var args []interface{}
+    idx := 1
+    
+    // Determinar si necesitamos JOIN con album_formato
     if formatoID != nil {
-        baseQuery += " JOIN album_formato af ON a.id = af.album"
-        where = append(where, fmt.Sprintf("af.formato = $%d", idx))
+        baseQuery = "FROM album a JOIN album_formato af ON a.id = af.album"
+        whereClause += "af.formato = $" + strconv.Itoa(idx)
         args = append(args, *formatoID)
         idx++
+    } else {
+        baseQuery = "FROM album a"
+        whereClause = ""
     }
     
+    // Agregar condición de búsqueda por nombre
     if q != "" {
-        where = append(where, fmt.Sprintf("a.nombre ILIKE $%d", idx))
+        if whereClause != "" {
+            whereClause += " AND "
+        }
+        whereClause += "a.nombre ILIKE $" + strconv.Itoa(idx)
         args = append(args, likeQ)
         idx++
     }
+    
+    // Agregar condición de género
     if generoID != nil {
-        where = append(where, fmt.Sprintf("a.genero = $%d", idx))
+        if whereClause != "" {
+            whereClause += " AND "
+        }
+        whereClause += "a.genero = $" + strconv.Itoa(idx)
         args = append(args, *generoID)
         idx++
     }
     
-    whereClause := ""
-    if len(where) > 0 {
-        whereClause = "WHERE " + strings.Join(where, " AND ")
+    // Construir consulta COUNT
+    countQuery := "SELECT COUNT(DISTINCT a.id) " + baseQuery
+    if whereClause != "" {
+        countQuery += " WHERE " + whereClause
     }
     
-    // DEBUG: Mostrar la consulta COUNT
-    countQuery := fmt.Sprintf("SELECT COUNT(DISTINCT a.id) %s %s", baseQuery, whereClause)
     fmt.Printf("DEBUG COUNT Query: %s\n", countQuery)
     fmt.Printf("DEBUG COUNT Args: %v\n", args)
     
@@ -129,11 +140,14 @@ func (api *SearchAPI) BuscarAlbumes(q string, generoID *int, formatoID *int, pag
     offset := (pagina - 1) * porPagina
     
     // Query de selección
-    selQuery := fmt.Sprintf(`
-        SELECT DISTINCT a.id, a.nombre, a.duracion, a.imagen, a.fecha, a.genero, a.artista, a.precio
-        %s %s 
-        ORDER BY a.id LIMIT $%d OFFSET $%d`, 
-        baseQuery, whereClause, len(args)+1, len(args)+2)
+    selQuery := "SELECT DISTINCT a.id, a.nombre, a.duracion, a.imagen, a.fecha, a.genero, a.artista, a.precio " + 
+                baseQuery
+    
+    if whereClause != "" {
+        selQuery += " WHERE " + whereClause
+    }
+    
+    selQuery += " ORDER BY a.id LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
     
     selArgs := append(args, porPagina, offset)
     fmt.Printf("DEBUG SELECT Query: %s\n", selQuery)
@@ -219,36 +233,54 @@ func (api *SearchAPI) BuscarCanciones(q string, generoID *int, pagina, porPagina
     if q != "" {
         likeQ = "%" + q + "%"
     }
-    var where []string
+    
+    var whereClause string
     var args []interface{}
     idx := 1
+    
     if q != "" {
-        where = append(where, fmt.Sprintf("c.nombre ILIKE $%d", idx))
+        whereClause = "c.nombre ILIKE $" + strconv.Itoa(idx)
         args = append(args, likeQ)
         idx++
     }
+    
     if generoID != nil {
-        where = append(where, fmt.Sprintf("c.album IN (SELECT id FROM album WHERE genero = $%d)", idx))
+        if whereClause != "" {
+            whereClause += " AND "
+        }
+        whereClause += "c.album IN (SELECT id FROM album WHERE genero = $" + strconv.Itoa(idx) + ")"
         args = append(args, *generoID)
         idx++
     }
-    whereClause := ""
-    if len(where) > 0 {
-        whereClause = "WHERE " + strings.Join(where, " AND ")
+    
+    // Consulta COUNT
+    countQuery := "SELECT COUNT(*) FROM cancion c"
+    if whereClause != "" {
+        countQuery += " WHERE " + whereClause
     }
+    
     var total int
-    if err := api.DB.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM cancion c %s", whereClause), args...).Scan(&total); err != nil {
+    if err := api.DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
         return nil, 0, err
     }
+    
     offset := (pagina - 1) * porPagina
-    // NO incluimos archivo_audio para evitar carga excesiva
-    selQuery := fmt.Sprintf("SELECT c.id, c.nombre, c.duracion, c.album FROM cancion c %s ORDER BY c.id LIMIT $%d OFFSET $%d", whereClause, len(args)+1, len(args)+2)
-    args = append(args, porPagina, offset)
-    filas, err := api.DB.Query(selQuery, args...)
+    
+    // Consulta SELECT con paginación
+    selQuery := "SELECT c.id, c.nombre, c.duracion, c.album FROM cancion c"
+    if whereClause != "" {
+        selQuery += " WHERE " + whereClause
+    }
+    
+    selQuery += " ORDER BY c.id LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
+    
+    selArgs := append(args, porPagina, offset)
+    filas, err := api.DB.Query(selQuery, selArgs...)
     if err != nil {
         return nil, total, err
     }
     defer filas.Close()
+    
     var items []CancionResult
     for filas.Next() {
         var s CancionResult
@@ -266,30 +298,45 @@ func (api *SearchAPI) BuscarMerch(q string, pagina, porPagina int) ([]Merch, int
     if q != "" {
         likeQ = "%" + q + "%"
     }
-    var where []string
+    
+    var whereClause string
     var args []interface{}
-    idx := 1
+    
     if q != "" {
-        where = append(where, fmt.Sprintf("nombre ILIKE $%d", idx))
+        whereClause = "nombre ILIKE $1"
         args = append(args, likeQ)
-        idx++
     }
-    whereClause := ""
-    if len(where) > 0 {
-        whereClause = "WHERE " + strings.Join(where, " AND ")
+    
+    // Consulta COUNT
+    countQuery := "SELECT COUNT(*) FROM merchandising"
+    if whereClause != "" {
+        countQuery += " WHERE " + whereClause
     }
+    
     var total int
-    if err := api.DB.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM merchandising %s", whereClause), args...).Scan(&total); err != nil {
+    if err := api.DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
         return nil, 0, err
     }
+    
     offset := (pagina - 1) * porPagina
-    selQuery := fmt.Sprintf("SELECT id,nombre,precio,imagen,artista,stock FROM merchandising %s ORDER BY id LIMIT $%d OFFSET $%d", whereClause, len(args)+1, len(args)+2)
-    args = append(args, porPagina, offset)
-    filas, err := api.DB.Query(selQuery, args...)
+    
+    // Consulta SELECT con paginación
+    selQuery := "SELECT id, nombre, precio, imagen, artista, stock FROM merchandising"
+    if whereClause != "" {
+        selQuery += " WHERE " + whereClause
+    }
+    
+    // Ajustar los números de parámetros para la paginación
+    limitOffsetIdx := len(args) + 1
+    selQuery += " ORDER BY id LIMIT $" + strconv.Itoa(limitOffsetIdx) + " OFFSET $" + strconv.Itoa(limitOffsetIdx+1)
+    
+    selArgs := append(args, porPagina, offset)
+    filas, err := api.DB.Query(selQuery, selArgs...)
     if err != nil {
         return nil, total, err
     }
     defer filas.Close()
+    
     var items []Merch
     for filas.Next() {
         var m Merch
@@ -318,24 +365,31 @@ func (api *SearchAPI) BuscarArtistas(q string, generoID *int) ([]ArtistResult, i
 
     // desde álbumes
     {
+        var whereClause string
         var args []interface{}
-        var where []string
         idx := 1
+        
         if q != "" {
-            where = append(where, fmt.Sprintf("nombre ILIKE $%d", idx))
+            whereClause = "nombre ILIKE $" + strconv.Itoa(idx)
             args = append(args, likeQ)
             idx++
         }
+        
         if generoID != nil {
-            where = append(where, fmt.Sprintf("genero = $%d", idx))
+            if whereClause != "" {
+                whereClause += " AND "
+            }
+            whereClause += "genero = $" + strconv.Itoa(idx)
             args = append(args, *generoID)
             idx++
         }
-        whereClause := ""
-        if len(where) > 0 {
-            whereClause = "WHERE " + strings.Join(where, " AND ")
+        
+        query := "SELECT DISTINCT artista FROM album"
+        if whereClause != "" {
+            query += " WHERE " + whereClause
         }
-        filas, err := api.DB.Query(fmt.Sprintf("SELECT DISTINCT artista FROM album %s", whereClause), args...)
+        
+        filas, err := api.DB.Query(query, args...)
         if err == nil {
             defer filas.Close()
             for filas.Next() {
@@ -355,19 +409,19 @@ func (api *SearchAPI) BuscarArtistas(q string, generoID *int) ([]ArtistResult, i
 
     // desde artista_cancion join cancion
     {
+        var whereClause string
         var args []interface{}
-        var where []string
-        idx := 1
+        
         if q != "" {
-            where = append(where, fmt.Sprintf("c.nombre ILIKE $%d", idx))
+            whereClause = "c.nombre ILIKE $1"
             args = append(args, likeQ)
-            idx++
         }
-        whereClause := ""
-        if len(where) > 0 {
-            whereClause = "WHERE " + strings.Join(where, " AND ")
+        
+        query := "SELECT DISTINCT ac.artista FROM artista_cancion ac JOIN cancion c ON ac.cancion = c.id"
+        if whereClause != "" {
+            query += " WHERE " + whereClause
         }
-        query := fmt.Sprintf("SELECT DISTINCT ac.artista FROM artista_cancion ac JOIN cancion c ON ac.cancion = c.id %s", whereClause)
+        
         filas, err := api.DB.Query(query, args...)
         if err == nil {
             defer filas.Close()
@@ -388,19 +442,20 @@ func (api *SearchAPI) BuscarArtistas(q string, generoID *int) ([]ArtistResult, i
 
     // desde merchandising
     {
+        var whereClause string
         var args []interface{}
-        var where []string
-        idx := 1
+        
         if q != "" {
-            where = append(where, fmt.Sprintf("nombre ILIKE $%d", idx))
+            whereClause = "nombre ILIKE $1"
             args = append(args, likeQ)
-            idx++
         }
-        whereClause := ""
-        if len(where) > 0 {
-            whereClause = "WHERE " + strings.Join(where, " AND ")
+        
+        query := "SELECT DISTINCT artista FROM merchandising"
+        if whereClause != "" {
+            query += " WHERE " + whereClause
         }
-        filas, err := api.DB.Query(fmt.Sprintf("SELECT DISTINCT artista FROM merchandising %s", whereClause), args...)
+        
+        filas, err := api.DB.Query(query, args...)
         if err == nil {
             defer filas.Close()
             for filas.Next() {
