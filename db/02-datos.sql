@@ -49,56 +49,43 @@ INSERT INTO album_formato (album, formato) VALUES
 -- 7 - disponible solo en Digital y Vinilo
 (5, 1), (5, 2);
 
-INSERT INTO cancion (nombre, duracion, album, archivo_audio) VALUES
--- AITANA – Alpha
-('Los Ángeles', 180, 1,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Las Babys', 175, 1,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Dararí', 200, 1,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('2 Extraños', 220, 1,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
+DO $$
+DECLARE
+    sample_audio_path TEXT := '/tmp/assets/songs/sample.mp3';
+    sample_audio_data BYTEA := pg_read_binary_file(sample_audio_path)::bytea;
+BEGIN
+    -- Insertar canciones usando la variable
+    INSERT INTO cancion (nombre, duracion, album, archivo_audio) VALUES
+    -- AITANA – Alpha
+    ('Los Ángeles', 180, 1, sample_audio_data),
+    ('Las Babys', 175, 1, sample_audio_data),
+    ('Dararí', 200, 1, sample_audio_data),
+    ('2 Extraños', 220, 1, sample_audio_data),
 
--- ARCTIC MONKEYS – AM
-('Do I Wanna Know?', 250, 2,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('R U Mine?', 200, 2,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Arabella', 215, 2,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Snap Out Of It', 210, 2,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Knee Socks', 230, 2,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
+    -- ARCTIC MONKEYS – AM
+    ('Do I Wanna Know?', 250, 2, sample_audio_data),
+    ('R U Mine?', 200, 2, sample_audio_data),
+    ('Arabella', 215, 2, sample_audio_data),
+    ('Snap Out Of It', 210, 2, sample_audio_data),
+    ('Knee Socks', 230, 2, sample_audio_data),
 
--- BAD BUNNY – Un Verano Sin Ti
-('Titi Me Preguntó', 240, 3,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Efecto', 210, 3,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Ojitos Lindos', 240, 3,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Me Porto Bonito', 200, 3,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Callaita', 220, 3,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
+    -- BAD BUNNY – Un Verano Sin Ti
+    ('Titi Me Preguntó', 240, 3, sample_audio_data),
+    ('Efecto', 210, 3, sample_audio_data),
+    ('Ojitos Lindos', 240, 3, sample_audio_data),
+    ('Me Porto Bonito', 200, 3, sample_audio_data),
+    ('Callaita', 220, 3, sample_audio_data),
 
--- VETUSTA MORLA – Cable a Tierra
-('Finisterre', 200, 4,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Palabra Es Epicentro', 195, 4,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('La Virgen de la Humanidad', 230, 4,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
+    -- VETUSTA MORLA – Cable a Tierra
+    ('Finisterre', 200, 4, sample_audio_data),
+    ('Palabra Es Epicentro', 195, 4, sample_audio_data),
+    ('La Virgen de la Humanidad', 230, 4, sample_audio_data),
 
--- DAVID GUETTA – 7
-('Flames', 210, 5,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Say My Name', 200, 5,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea),
-('Don''t Leave Me Alone', 190, 5,
- pg_read_binary_file('/tmp/assets/songs/sample.mp3')::bytea);
+    -- DAVID GUETTA – 7
+    ('Flames', 210, 5, sample_audio_data),
+    ('Say My Name', 200, 5, sample_audio_data),
+    ('Don''t Leave Me Alone', 190, 5, sample_audio_data);
+END $$;
 
 -- Relaciones artista_cancion
 INSERT INTO artista_cancion (cancion, artista) VALUES
