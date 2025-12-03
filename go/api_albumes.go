@@ -518,15 +518,15 @@ func (api *AlbumesAPI) AlbumsIdDetalleGet(c *gin.Context) {
 
 // Estructura auxiliar para datos base del álbum
 type albumBaseData struct {
-	ID              int32
-	Nombre          string
+	ID               int32
+	Nombre           string
 	DuracionSegundos sql.NullInt32
-	Imagen          string
-	Fecha           string
-	GeneroID        sql.NullInt32
-	GeneroNombre    sql.NullString
-	ArtistaID       int32
-	Precio          sql.NullFloat64
+	Imagen           string
+	Fecha            string
+	GeneroID         sql.NullInt32
+	GeneroNombre     sql.NullString
+	ArtistaID        int32
+	Precio           sql.NullFloat64
 }
 
 // Función auxiliar para obtener datos base del álbum
@@ -594,11 +594,7 @@ func (api *AlbumesAPI) obtenerCancionesAlbum(idParam string) ([]Cancion, error) 
 
 // Función auxiliar para construir el AlbumDetalle final
 func (api *AlbumesAPI) construirAlbumDetalle(data albumBaseData, canciones []Cancion) AlbumDetalle {
-	// Obtener nombre del artista
-	artistaNombre, _ := ObtenerNombreUsuario(data.ArtistaID)
-	if artistaNombre == "" {
-		artistaNombre = "Artista Desconocido"
-	}
+	artistaNombre := api.obtenerNombreArtistaSeguro(data.ArtistaID)
 
 	// Construir objeto base
 	albumDetalle := AlbumDetalle{
@@ -608,23 +604,33 @@ func (api *AlbumesAPI) construirAlbumDetalle(data albumBaseData, canciones []Can
 		Artista:       data.ArtistaID,
 		NombreArtista: artistaNombre,
 		Canciones:     canciones,
-		Imagen:        data.Imagen,
 	}
 
-	// Procesar duración
-	albumDetalle = api.procesarDuracion(albumDetalle, data.DuracionSegundos, canciones)
-
-	// Procesar género
-	albumDetalle = api.procesarGenero(albumDetalle, data.GeneroID, data.GeneroNombre)
-
-	// Procesar precio
-	albumDetalle = api.procesarPrecio(albumDetalle, data.Precio)
+	// Procesar campos adicionales
+	albumDetalle = procesarDuracionAlbum(albumDetalle, data.DuracionSegundos, canciones)
+	albumDetalle = procesarGeneroAlbum(albumDetalle, data.GeneroID, data.GeneroNombre)
+	albumDetalle = procesarPrecioAlbum(albumDetalle, data.Precio)
 
 	return albumDetalle
 }
 
+// Función auxiliar para obtener nombre de artista
+func (api *AlbumesAPI) obtenerNombreArtistaSeguro(artistaID int32) string {
+	nombre, err := ObtenerNombreUsuario(artistaID)
+	if err != nil {
+		fmt.Printf("Advertencia: No se pudo obtener nombre del artista ID %d: %v\n", artistaID, err)
+		return "Artista Desconocido"
+	}
+	
+	if nombre == "" {
+		return "Artista Sin Nombre"
+	}
+	
+	return nombre
+}
+
 // Funciones auxiliares para procesar campos específicos
-func (api *AlbumesAPI) procesarDuracion(albumDetalle AlbumDetalle, duracionSegundos sql.NullInt32, canciones []Cancion) AlbumDetalle {
+func procesarDuracionAlbum(albumDetalle AlbumDetalle, duracionSegundos sql.NullInt32, canciones []Cancion) AlbumDetalle {
 	if duracionSegundos.Valid {
 		albumDetalle.Duracion = formatDuracion(int(duracionSegundos.Int32))
 	} else {
@@ -641,7 +647,7 @@ func (api *AlbumesAPI) procesarDuracion(albumDetalle AlbumDetalle, duracionSegun
 	return albumDetalle
 }
 
-func (api *AlbumesAPI) procesarGenero(albumDetalle AlbumDetalle, generoID sql.NullInt32, generoNombre sql.NullString) AlbumDetalle {
+func procesarGeneroAlbum(albumDetalle AlbumDetalle, generoID sql.NullInt32, generoNombre sql.NullString) AlbumDetalle {
 	if generoID.Valid {
 		albumDetalle.Genero = Genero{
 			Id:     generoID.Int32,
@@ -651,7 +657,7 @@ func (api *AlbumesAPI) procesarGenero(albumDetalle AlbumDetalle, generoID sql.Nu
 	return albumDetalle
 }
 
-func (api *AlbumesAPI) procesarPrecio(albumDetalle AlbumDetalle, precio sql.NullFloat64) AlbumDetalle {
+func procesarPrecioAlbum(albumDetalle AlbumDetalle, precio sql.NullFloat64) AlbumDetalle {
 	if precio.Valid {
 		albumDetalle.Precio = float32(precio.Float64)
 	}
