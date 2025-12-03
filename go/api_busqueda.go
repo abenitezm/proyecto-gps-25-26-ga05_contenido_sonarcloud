@@ -566,7 +566,7 @@ func (api *SearchAPI) BusquedaGet(c *gin.Context) {
         resp.Results["artistas"] = artistas
     }
 
-    // Si todo está vacío, retornar mensaje
+    // Si está completamente vacío, retornar mensaje
     vacio := true
     for _, v := range resp.Results {
         switch vv := v.(type) {
