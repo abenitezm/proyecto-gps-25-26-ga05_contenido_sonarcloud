@@ -271,108 +271,116 @@ func (api *AlbumesAPI) AlbumsIdPatch(c *gin.Context) {
 	}
 
 	// Verificar que el álbum existe
-	verificacion := `SELECT id FROM album WHERE id = $1`
-	var id int
-	err := api.DB.QueryRow(verificacion, idParam).Scan(&id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al verificar el álbum: " + err.Error()})
+	if !api.albumExists(idParam) {
+		c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
 		return
 	}
 
-	// Construir query dinámica
-	query := "UPDATE album SET"
-	params := []any{}
-	i := 1
-
-	if req.Nombre != nil {
-		query += fmt.Sprintf(" nombre=$%d,", i)
-		params = append(params, *req.Nombre)
-		i++
-	}
-	if req.Duracion != nil {
-		query += fmt.Sprintf(" duracion=$%d,", i)
-		params = append(params, *req.Duracion)
-		i++
-	}
-	if req.Imagen != nil {
-		query += fmt.Sprintf(" imagen=$%d,", i)
-		params = append(params, *req.Imagen)
-		i++
-	}
-	if req.Fecha != nil {
-		query += fmt.Sprintf(" fecha=$%d,", i)
-		params = append(params, *req.Fecha)
-		i++
-	}
-	if req.Genero != nil {
-		query += fmt.Sprintf(" genero=$%d,", i)
-		params = append(params, *req.Genero)
-		i++
-	}
-	if req.Artista != nil {
-		query += fmt.Sprintf(" artista=$%d,", i)
-		params = append(params, *req.Artista)
-		i++
-	}
-	if req.Precio != nil {
-		query += fmt.Sprintf(" precio=$%d,", i)
-		params = append(params, *req.Precio)
-		i++
-	}
-
-	if len(params) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No se proporcionaron campos para actualizar"})
-		return
-	}
-
-	query = query[:len(query)-1] + fmt.Sprintf(" WHERE id=$%d RETURNING id, nombre, duracion, imagen, fecha, genero, artista, precio", i)
-	params = append(params, idParam)
-
-	var albumActualizado Album
-	var duracion sql.NullInt32
-	var generoID sql.NullInt32
-	var precio sql.NullFloat64
-
-	err = api.DB.QueryRow(query, params...).Scan(
-		&albumActualizado.Id,
-		&albumActualizado.Nombre,
-		&duracion,
-		&albumActualizado.Imagen,
-		&albumActualizado.Fecha,
-		&generoID,
-		&albumActualizado.Artista,
-		&precio,
-	)
-
+	// Construir y ejecutar la actualización
+	albumActualizado, err := api.updateAlbum(idParam, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al actualizar el álbum: " + err.Error()})
 		return
 	}
 
+	// Añadir datos del género si es necesario
+	albumActualizado = api.addGenre(albumActualizado)
+
+	c.JSON(http.StatusOK, albumActualizado)
+}
+
+// Función auxiliar para verificar si un álbum existe
+func (api *AlbumesAPI) albumExists(id string) bool {
+	query := `SELECT id FROM album WHERE id = $1`
+	var idInt int
+	err := api.DB.QueryRow(query, id).Scan(&idInt)
+	return err == nil
+}
+
+// Función auxiliar para construir y ejecutar la actualización
+func (api *AlbumesAPI) updateAlbum(idParam string, req UpdateAlbumRequest) (Album, error) {
+	query, params := buildUpdateQuery(req)
+	if len(params) == 0 {
+		return Album{}, fmt.Errorf("no se proporcionaron campos para actualizar")
+	}
+
+	query += fmt.Sprintf(" WHERE id=$%d RETURNING id, nombre, duracion, imagen, fecha, genero, artista, precio", len(params)+1)
+	params = append(params, idParam)
+
+	var album Album
+	var duracion sql.NullInt32
+	var generoID sql.NullInt32
+	var precio sql.NullFloat64
+
+	err := api.DB.QueryRow(query, params...).Scan(
+		&album.Id,
+		&album.Nombre,
+		&duracion,
+		&album.Imagen,
+		&album.Fecha,
+		&generoID,
+		&album.Artista,
+		&precio,
+	)
+
+	if err != nil {
+		return Album{}, err
+	}
+
 	if duracion.Valid {
-		albumActualizado.Duracion = duracion.Int32
+		album.Duracion = duracion.Int32
 	}
 
 	if precio.Valid {
-		albumActualizado.Precio = float32(precio.Float64)
+		album.Precio = float32(precio.Float64)
 	}
 
-	if generoID.Valid {
+	return album, nil
+}
+
+// Función auxiliar para construir la query de actualización
+func buildUpdateQuery(req UpdateAlbumRequest) (string, []any) {
+	query := "UPDATE album SET"
+	params := []any{}
+	i := 1
+
+	addField := func(condition bool, fieldName string, value any) {
+		if condition {
+			query += fmt.Sprintf(" %s=$%d,", fieldName, i)
+			params = append(params, value)
+			i++
+		}
+	}
+
+	addField(req.Nombre != nil, "nombre", *req.Nombre)
+	addField(req.Duracion != nil, "duracion", *req.Duracion)
+	addField(req.Imagen != nil, "imagen", *req.Imagen)
+	addField(req.Fecha != nil, "fecha", *req.Fecha)
+	addField(req.Genero != nil, "genero", *req.Genero)
+	addField(req.Artista != nil, "artista", *req.Artista)
+	addField(req.Precio != nil, "precio", *req.Precio)
+
+	// Eliminar la última coma si hay parámetros
+	if len(params) > 0 {
+		query = query[:len(query)-1]
+	}
+
+	return query, params
+}
+
+// Función auxiliar para enriquecer el álbum con información del género
+func (api *AlbumesAPI) addGenre(album Album) Album {
+	if album.Genero.Id > 0 {
 		var generoNombre sql.NullString
-		err := api.DB.QueryRow("SELECT nombre FROM genero WHERE id = $1", generoID.Int32).Scan(&generoNombre)
+		err := api.DB.QueryRow("SELECT nombre FROM genero WHERE id = $1", album.Genero.Id).Scan(&generoNombre)
 		if err == nil && generoNombre.Valid {
-			albumActualizado.Genero = Genero{
-				Id:     generoID.Int32,
+			album.Genero = Genero{
+				Id:     album.Genero.Id,
 				Nombre: generoNombre.String,
 			}
 		}
 	}
-
-	c.JSON(http.StatusOK, albumActualizado)
+	return album
 }
 
 // Delete /albums/:id
@@ -484,33 +492,8 @@ func (api *AlbumesAPI) getAlbumsByArtist(c *gin.Context, artistaParam string) {
 func (api *AlbumesAPI) AlbumsIdDetalleGet(c *gin.Context) {
 	idParam := c.Param("id")
 
-	// Obtener información del álbum
-	albumQuery := `
-		SELECT a.id, a.nombre, a.duracion, a.imagen, a.fecha, a.genero, a.artista, a.precio, g.nombre as genero_nombre
-		FROM album a
-		LEFT JOIN genero g ON a.genero = g.id
-		WHERE a.id = $1
-	`
-
-	var album Album
-	var duracionSegundos sql.NullInt32
-	var generoID sql.NullInt32
-	var generoNombre sql.NullString
-	var precio sql.NullFloat64
-	var artistaID int32
-
-	err := api.DB.QueryRow(albumQuery, idParam).Scan(
-		&album.Id,
-		&album.Nombre,
-		&duracionSegundos,
-		&album.Imagen,
-		&album.Fecha,
-		&generoID,
-		&artistaID,
-		&precio,
-		&generoNombre,
-	)
-
+	// Obtener información básica del álbum
+	albumBase, err := api.obtenerAlbumBase(idParam)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": ERR_ALBUM_NO_ENCONTRADO})
@@ -520,26 +503,69 @@ func (api *AlbumesAPI) AlbumsIdDetalleGet(c *gin.Context) {
 		return
 	}
 
-	// Obtener información del artista desde el microservicio de usuarios
-	artistaNombre, err := ObtenerNombreUsuario(artistaID)
+	// Obtener canciones del álbum
+	canciones, err := api.obtenerCancionesAlbum(idParam)
 	if err != nil {
-		// Si falla la consulta al microservicio de usuarios, usar un valor por defecto
-		artistaNombre = "Artista Desconocido"
-		fmt.Printf("Error al obtener nombre del artista: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al consultar las canciones del álbum: " + err.Error()})
+		return
 	}
 
-	// Obtener las canciones del álbum
-	cancionesQuery := `
+	// Construir la respuesta final
+	albumDetalle := api.construirAlbumDetalle(albumBase, canciones)
+
+	c.JSON(http.StatusOK, albumDetalle)
+}
+
+// Estructura auxiliar para datos base del álbum
+type albumBaseData struct {
+	ID              int32
+	Nombre          string
+	DuracionSegundos sql.NullInt32
+	Imagen          string
+	Fecha           string
+	GeneroID        sql.NullInt32
+	GeneroNombre    sql.NullString
+	ArtistaID       int32
+	Precio          sql.NullFloat64
+}
+
+// Función auxiliar para obtener datos base del álbum
+func (api *AlbumesAPI) obtenerAlbumBase(idParam string) (albumBaseData, error) {
+	query := `
+		SELECT a.id, a.nombre, a.duracion, a.imagen, a.fecha, a.genero, a.artista, a.precio, g.nombre as genero_nombre
+		FROM album a
+		LEFT JOIN genero g ON a.genero = g.id
+		WHERE a.id = $1
+	`
+
+	var data albumBaseData
+	err := api.DB.QueryRow(query, idParam).Scan(
+		&data.ID,
+		&data.Nombre,
+		&data.DuracionSegundos,
+		&data.Imagen,
+		&data.Fecha,
+		&data.GeneroID,
+		&data.ArtistaID,
+		&data.Precio,
+		&data.GeneroNombre,
+	)
+
+	return data, err
+}
+
+// Función auxiliar para obtener canciones del álbum
+func (api *AlbumesAPI) obtenerCancionesAlbum(idParam string) ([]Cancion, error) {
+	query := `
 		SELECT id, nombre, duracion, album
 		FROM cancion
 		WHERE album = $1
 		ORDER BY id
 	`
 
-	rows, err := api.DB.Query(cancionesQuery, idParam)
+	rows, err := api.DB.Query(query, idParam)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al consultar las canciones del álbum: " + err.Error()})
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -556,30 +582,53 @@ func (api *AlbumesAPI) AlbumsIdDetalleGet(c *gin.Context) {
 		)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al leer los datos de las canciones del álbum"})
-			return
+			return nil, err
 		}
 
-		// Convertir duración de segundos a formato MM:SS
 		cancion.Duracion = formatDuracion(duracion)
 		canciones = append(canciones, cancion)
 	}
 
-	// Construir la respuesta de AlbumDetalle
-	albumDetalle := AlbumDetalle{
-		Id:            album.Id,
-		Nombre:        album.Nombre,
-		Fecha:         album.Fecha,
-		Artista:       artistaID,
-		NombreArtista: artistaNombre, // Nuevo campo para el nombre del artista
-		Canciones:     canciones,
+	return canciones, nil
+}
+
+// Función auxiliar para construir el AlbumDetalle final
+func (api *AlbumesAPI) construirAlbumDetalle(data albumBaseData, canciones []Cancion) AlbumDetalle {
+	// Obtener nombre del artista
+	artistaNombre, _ := ObtenerNombreUsuario(data.ArtistaID)
+	if artistaNombre == "" {
+		artistaNombre = "Artista Desconocido"
 	}
 
-	// Procesar duración del álbum
+	// Construir objeto base
+	albumDetalle := AlbumDetalle{
+		Id:            data.ID,
+		Nombre:        data.Nombre,
+		Fecha:         data.Fecha,
+		Artista:       data.ArtistaID,
+		NombreArtista: artistaNombre,
+		Canciones:     canciones,
+		Imagen:        data.Imagen,
+	}
+
+	// Procesar duración
+	albumDetalle = api.procesarDuracion(albumDetalle, data.DuracionSegundos, canciones)
+
+	// Procesar género
+	albumDetalle = api.procesarGenero(albumDetalle, data.GeneroID, data.GeneroNombre)
+
+	// Procesar precio
+	albumDetalle = api.procesarPrecio(albumDetalle, data.Precio)
+
+	return albumDetalle
+}
+
+// Funciones auxiliares para procesar campos específicos
+func (api *AlbumesAPI) procesarDuracion(albumDetalle AlbumDetalle, duracionSegundos sql.NullInt32, canciones []Cancion) AlbumDetalle {
 	if duracionSegundos.Valid {
 		albumDetalle.Duracion = formatDuracion(int(duracionSegundos.Int32))
 	} else {
-		// Calcular duración total sumando las canciones si no está definida
+		// Calcular duración total sumando las canciones
 		duracionTotal := 0
 		for _, cancion := range canciones {
 			segundos, err := parseDuracion(cancion.Duracion)
@@ -589,21 +638,24 @@ func (api *AlbumesAPI) AlbumsIdDetalleGet(c *gin.Context) {
 		}
 		albumDetalle.Duracion = formatDuracion(duracionTotal)
 	}
+	return albumDetalle
+}
 
-	// Procesar género
+func (api *AlbumesAPI) procesarGenero(albumDetalle AlbumDetalle, generoID sql.NullInt32, generoNombre sql.NullString) AlbumDetalle {
 	if generoID.Valid {
 		albumDetalle.Genero = Genero{
 			Id:     generoID.Int32,
 			Nombre: generoNombre.String,
 		}
 	}
+	return albumDetalle
+}
 
-	// Procesar precio
+func (api *AlbumesAPI) procesarPrecio(albumDetalle AlbumDetalle, precio sql.NullFloat64) AlbumDetalle {
 	if precio.Valid {
 		albumDetalle.Precio = float32(precio.Float64)
 	}
-
-	c.JSON(http.StatusOK, albumDetalle)
+	return albumDetalle
 }
 
 // Get /albums/:id/imagen
