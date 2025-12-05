@@ -43,7 +43,7 @@ func (api *SearchAPI) ResolverIDGenero(generoParam string) (*int, error) {
     }
     // Fallback a coincidencia parcial usando ILIKE
     like := "%" + generoParam + "%"
-    if err2 := api.DB.QueryRow("SELECT id FROM genero WHERE nombre ILIKE $1 LIMIT 1", like).Scan(&gid); err2 == nil {
+    if api.DB.QueryRow("SELECT id FROM genero WHERE nombre ILIKE $1 LIMIT 1", like).Scan(&gid) == nil {
         return &gid, nil
     }
     return nil, nil // no encontrado no es un error para nuestro caso de uso
